@@ -36,6 +36,7 @@ int main() {
     assert(first.emit);
     assert(first.protocol.allowed);
     assert(first.protocol.safety_reason == ServoSafetyReason::None);
+    assert(first.source == ServoCommandSource::Autopilot);
     assert(runtime.has_input());
     assert(runtime.has_emitted());
     assert(runtime.last_emit_us() == 1000000ULL);
@@ -104,6 +105,60 @@ int main() {
     assert(runtime.latest_feedback().synced);
     assert(runtime.latest_feedback().engaged);
     assert(runtime.latest_feedback().timestamp_us == 1300000ULL);
+
+    ServoRuntime fault_runtime(config);
+    ServoRuntimeOutput before_fault = fault_runtime.update_command(
+        ServoCommand(ServoCommandMode::Speed, 0.25f, 2000000ULL, true),
+        center,
+        2000000ULL);
+    assert(before_fault.emit);
+    assert(before_fault.protocol.allowed);
+    pypilot_servo_protocol::Telemetry fault_telemetry;
+    pypilot_servo_protocol::Packet fault_flags = {pypilot_servo_protocol::FLAGS_CODE,
+                                                 pypilot_servo_protocol::OVERTEMP_FAULT};
+    assert(fault_telemetry.apply(fault_flags));
+    fault_runtime.update_feedback(fault_telemetry, 2010000ULL);
+    ServoRuntimeOutput fault_block = fault_runtime.update_command(
+        ServoCommand(ServoCommandMode::Speed, 0.25f, 2010000ULL, true),
+        center,
+        2010000ULL);
+    assert(fault_block.emit);
+    assert(!fault_block.protocol.allowed);
+    assert(fault_block.protocol.safety_reason == ServoSafetyReason::FeedbackBlocked);
+    assert(decoded_packet(fault_block.protocol.raw_packet).value == pypilot_servo_protocol::encode_command(0.0f));
+
+    ServoRuntime arbitration_runtime(config);
+    ServoCommandRequest auto_request(ServoCommand(ServoCommandMode::Speed, 0.20f, 3000000ULL, true),
+                                     ServoCommandSource::Autopilot);
+    ServoCommandRequest no_manual;
+    ServoRuntimeOutput auto_out = arbitration_runtime.update_command_requests(auto_request, no_manual, center, 3000000ULL);
+    assert(auto_out.emit);
+    assert(auto_out.source == ServoCommandSource::Autopilot);
+    assert(arbitration_runtime.last_source() == ServoCommandSource::Autopilot);
+    assert(arbitration_runtime.last_sent_source() == ServoCommandSource::Autopilot);
+
+    ServoCommandRequest manual_request(ServoCommand(ServoCommandMode::Speed, -0.30f, 3050000ULL, true),
+                                       ServoCommandSource::Manual);
+    ServoRuntimeOutput manual_out = arbitration_runtime.update_command_requests(auto_request, manual_request, center, 3050000ULL);
+    assert(manual_out.emit);
+    assert(manual_out.source == ServoCommandSource::Manual);
+    assert(manual_out.protocol.allowed);
+    assert(nearf(manual_out.protocol.effective_command.value, -0.30f));
+    assert(arbitration_runtime.last_source() == ServoCommandSource::Manual);
+    assert(arbitration_runtime.last_sent_source() == ServoCommandSource::Manual);
+
+    ServoCommandRequest manual_stop(ServoCommand(ServoCommandMode::Stop, 0.0f, 3060000ULL, false),
+                                    ServoCommandSource::Manual);
+    ServoRuntimeOutput manual_stop_out = arbitration_runtime.update_command_requests(auto_request, manual_stop, center, 3060000ULL);
+    assert(!manual_stop_out.protocol.allowed);
+    assert(manual_stop_out.source == ServoCommandSource::Manual);
+    assert(manual_stop_out.protocol.safety_reason == ServoSafetyReason::Disabled);
+
+    ServoRuntimeConfig always_emit_config = config;
+    always_emit_config.output_period_us = 0;
+    ServoRuntime always_emit(always_emit_config);
+    assert(always_emit.update_command(ServoCommand(ServoCommandMode::Speed, 0.1f, 4000000ULL, true), center, 4000000ULL).emit);
+    assert(always_emit.update_command(ServoCommand(ServoCommandMode::Speed, 0.2f, 4000001ULL, true), center, 4000001ULL).emit);
 
     runtime.reset();
     assert(!runtime.has_input());
