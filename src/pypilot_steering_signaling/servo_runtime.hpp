@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <pypilot_syslib.hpp>
 #include "servo_protocol_bridge.hpp"
 
 namespace pypilot_steering_signaling {
@@ -34,12 +35,15 @@ public:
     ServoRuntime()
         : config_(), last_input_(), last_source_(ServoCommandSource::None), latest_feedback_(),
           has_input_(false), has_feedback_(false), has_emit_(false), last_emit_us_(0),
-          last_sent_allowed_(false), last_sent_source_(ServoCommandSource::None) {}
+          last_sent_allowed_(false), last_sent_source_(ServoCommandSource::None), logger_(0) {}
 
     explicit ServoRuntime(const ServoRuntimeConfig& config)
         : config_(config), last_input_(), last_source_(ServoCommandSource::None), latest_feedback_(),
           has_input_(false), has_feedback_(false), has_emit_(false), last_emit_us_(0),
-          last_sent_allowed_(false), last_sent_source_(ServoCommandSource::None) {}
+          last_sent_allowed_(false), last_sent_source_(ServoCommandSource::None), logger_(0) {}
+
+    void set_logger(pypilot_syslib::Logger* logger) { logger_ = logger; }
+    pypilot_syslib::Logger* logger() const { return logger_; }
 
     void reset() {
         last_input_ = ServoCommand();
@@ -71,6 +75,14 @@ public:
     void update_feedback(const ServoFeedback& feedback) {
         latest_feedback_ = feedback;
         has_feedback_ = true;
+        if (feedback.faulted) {
+            pypilot_syslib::log_if(logger_, feedback.timestamp_us,
+                                   pypilot_syslib::LogLevel::Error,
+                                   pypilot_syslib::LogModule::SteeringSignaling,
+                                   pypilot_syslib::LogEvent::ServoFeedbackFault,
+                                   "servo feedback fault",
+                                   static_cast<int32_t>(feedback.flags));
+        }
     }
 
     void update_feedback(const pypilot_servo_protocol::Telemetry& telemetry, uint64_t now_us) {
@@ -121,6 +133,15 @@ private:
             packet = feedback_blocked_packet(now_us);
         }
 
+        if (!packet.allowed) {
+            pypilot_syslib::log_if(logger_, now_us,
+                                   pypilot_syslib::LogLevel::Warn,
+                                   pypilot_syslib::LogModule::SteeringSignaling,
+                                   pypilot_syslib::LogEvent::ServoCommandBlocked,
+                                   "servo command blocked",
+                                   static_cast<int32_t>(packet.safety_reason));
+        }
+
         const bool should_emit = should_emit_packet(packet, source, now_us);
         if (should_emit) {
             has_emit_ = true;
@@ -152,6 +173,7 @@ private:
     uint64_t last_emit_us_;
     bool last_sent_allowed_;
     ServoCommandSource last_sent_source_;
+    pypilot_syslib::Logger* logger_;
 };
 
 }  // namespace pypilot_steering_signaling
