@@ -14,8 +14,13 @@ jobs:
         with:
           repository: bareboat-necessities/pypilot-servo-protocol
           path: deps/pypilot-servo-protocol
+      - name: Checkout syslib dependency
+        uses: actions/checkout@v4
+        with:
+          repository: bareboat-necessities/pypilot-syslib
+          path: deps/pypilot-syslib
       - name: Configure
-        run: cmake -S . -B build -DPYPILOT_SERVO_PROTOCOL_DIR="$PWD/deps/pypilot-servo-protocol"
+        run: cmake -S . -B build -DPYPILOT_SERVO_PROTOCOL_DIR="$PWD/deps/pypilot-servo-protocol" -DPYPILOT_SYSLIB_DIR="$PWD/deps/pypilot-syslib"
       - name: Build
         run: cmake --build build
       - name: Test
@@ -30,6 +35,11 @@ jobs:
         with:
           repository: bareboat-necessities/pypilot-servo-protocol
           path: deps/pypilot-servo-protocol
+      - name: Checkout syslib dependency
+        uses: actions/checkout@v4
+        with:
+          repository: bareboat-necessities/pypilot-syslib
+          path: deps/pypilot-syslib
       - uses: arduino/setup-arduino-cli@v2
       - name: Install AVR core
         run: |
@@ -40,4 +50,5 @@ jobs:
           arduino-cli compile --fqbn arduino:avr:mega \
             --libraries "$PWD" \
             --libraries "$PWD/deps/pypilot-servo-protocol" \
+            --libraries "$PWD/deps/pypilot-syslib" \
             "$PWD/examples/arduino/SteeringExample"
