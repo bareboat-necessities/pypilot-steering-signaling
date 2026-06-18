@@ -34,7 +34,8 @@ enum class ServoSafetyReason {
     StaleCommand,
     RudderInvalid,
     RudderPortLimit,
-    RudderStarboardLimit
+    RudderStarboardLimit,
+    FeedbackBlocked
 };
 
 struct ServoSafetyResult {
