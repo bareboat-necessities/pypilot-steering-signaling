@@ -5,11 +5,22 @@ option(PYPILOT_STEERING_SIGNALING_BUILD_TESTS "Build tests" ON)
 option(PYPILOT_STEERING_SIGNALING_BUILD_EXAMPLES "Build examples" ON)
 set(PYPILOT_SERVO_PROTOCOL_DIR "" CACHE PATH "Path to pypilot-servo-protocol checkout")
 
-add_library(pypilot_steering_signaling INTERFACE)
-target_include_directories(pypilot_steering_signaling INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-if(PYPILOT_SERVO_PROTOCOL_DIR)
-  target_include_directories(pypilot_steering_signaling INTERFACE ${PYPILOT_SERVO_PROTOCOL_DIR}/src)
+if(NOT PYPILOT_SERVO_PROTOCOL_DIR)
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/pypilot-servo-protocol/src/pypilot_servo_protocol.hpp")
+    set(PYPILOT_SERVO_PROTOCOL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/pypilot-servo-protocol")
+  elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../pypilot-servo-protocol/src/pypilot_servo_protocol.hpp")
+    set(PYPILOT_SERVO_PROTOCOL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../pypilot-servo-protocol")
+  endif()
 endif()
+
+if(NOT EXISTS "${PYPILOT_SERVO_PROTOCOL_DIR}/src/pypilot_servo_protocol.hpp")
+  message(FATAL_ERROR "pypilot-servo-protocol checkout not found; set PYPILOT_SERVO_PROTOCOL_DIR")
+endif()
+
+add_library(pypilot_steering_signaling INTERFACE)
+target_include_directories(pypilot_steering_signaling INTERFACE
+  ${CMAKE_CURRENT_SOURCE_DIR}/src
+  ${PYPILOT_SERVO_PROTOCOL_DIR}/src)
 target_compile_features(pypilot_steering_signaling INTERFACE cxx_std_11)
 
 if(PYPILOT_STEERING_SIGNALING_BUILD_EXAMPLES)
