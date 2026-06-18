@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <pypilot_syslib.hpp>
 #include "rudder_calibration.hpp"
 
 namespace pypilot_steering_signaling {
@@ -15,10 +16,13 @@ struct RudderRuntimeConfig {
 class RudderRuntime {
 public:
     RudderRuntime()
-        : calibration_(), config_(), latest_(), has_sample_(false) {}
+        : calibration_(), config_(), latest_(), has_sample_(false), logger_(0) {}
 
     explicit RudderRuntime(const RudderCalibration& calibration)
-        : calibration_(calibration), config_(), latest_(), has_sample_(false) {}
+        : calibration_(calibration), config_(), latest_(), has_sample_(false), logger_(0) {}
+
+    void set_logger(pypilot_syslib::Logger* logger) { logger_ = logger; }
+    pypilot_syslib::Logger* logger() const { return logger_; }
 
     void reset() {
         latest_ = RudderAngle();
@@ -30,6 +34,11 @@ public:
         if (!rudder_calibration_is_valid(calibration_)) {
             latest_ = RudderAngle();
             has_sample_ = false;
+            pypilot_syslib::log_if(logger_, 0ULL,
+                                   pypilot_syslib::LogLevel::Error,
+                                   pypilot_syslib::LogModule::SteeringSignaling,
+                                   pypilot_syslib::LogEvent::RudderCalibrationInvalid,
+                                   "invalid rudder calibration");
         }
     }
 
@@ -66,6 +75,7 @@ private:
     RudderRuntimeConfig config_;
     RudderAngle latest_;
     bool has_sample_;
+    pypilot_syslib::Logger* logger_;
 };
 
 }  // namespace pypilot_steering_signaling
