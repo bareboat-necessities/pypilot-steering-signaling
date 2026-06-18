@@ -9,8 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout servo protocol dependency
+        uses: actions/checkout@v4
+        with:
+          repository: bareboat-necessities/pypilot-servo-protocol
+          path: deps/pypilot-servo-protocol
       - name: Configure
-        run: cmake -S . -B build
+        run: cmake -S . -B build -DPYPILOT_SERVO_PROTOCOL_DIR="$PWD/deps/pypilot-servo-protocol"
       - name: Build
         run: cmake --build build
       - name: Test
@@ -20,6 +25,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout servo protocol dependency
+        uses: actions/checkout@v4
+        with:
+          repository: bareboat-necessities/pypilot-servo-protocol
+          path: deps/pypilot-servo-protocol
       - uses: arduino/setup-arduino-cli@v2
       - name: Install AVR core
         run: |
@@ -29,4 +39,5 @@ jobs:
         run: |
           arduino-cli compile --fqbn arduino:avr:mega \
             --libraries "$PWD" \
+            --libraries "$PWD/deps/pypilot-servo-protocol" \
             "$PWD/examples/arduino/SteeringExample"
