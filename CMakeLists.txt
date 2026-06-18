@@ -30,7 +30,7 @@ endif()
 
 if(PYPILOT_STEERING_SIGNALING_BUILD_TESTS)
   enable_testing()
-  foreach(test_name test_rudder_calibration test_rudder_runtime test_servo_safety test_servo_protocol_bridge)
+  foreach(test_name test_rudder_calibration test_rudder_runtime test_servo_safety test_servo_protocol_bridge test_servo_runtime)
     add_executable(${test_name} tests/${test_name}.cpp)
     target_link_libraries(${test_name} PRIVATE pypilot_steering_signaling)
     add_test(NAME ${test_name} COMMAND ${test_name})
