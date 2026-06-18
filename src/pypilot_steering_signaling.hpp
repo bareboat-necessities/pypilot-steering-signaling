@@ -6,3 +6,4 @@
 #include "pypilot_steering_signaling/servo_safety.hpp"
 #include "pypilot_steering_signaling/servo_protocol_bridge.hpp"
 #include "pypilot_steering_signaling/servo_runtime.hpp"
+#include "pypilot_steering_signaling/servo_config_commands.hpp"
